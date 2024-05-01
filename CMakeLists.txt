@@ -6,13 +6,15 @@ project(comics-simdjson CXX)
 
 include(CTest)
 
+set( CMAKE_CXX_STANDARD 17 )
+set( CMAKE_CXX_STANDARD_REQUIRED TRUE )
+set( CMAKE_CXX_EXTENSIONS OFF )
+
 add_executable(print-comics main.cpp)
-set_target_properties(print-comics PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON)
 target_link_libraries(print-comics PUBLIC comics)
 
 add_subdirectory(comics)
+add_subdirectory(tools)
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
