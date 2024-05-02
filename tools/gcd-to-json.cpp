@@ -1,6 +1,11 @@
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
+#include <stdexcept>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -13,14 +18,55 @@ inline bool endsWith(const std::string &text, const std::string &suffix)
     return text.length() >= suffix.length() && text.substr(text.length()-suffix.length()) == suffix;
 }
 
+inline std::string quoted(std::string text)
+{
+    for (std::string::size_type pos = text.find('"'); pos != std::string::npos; pos = text.find('"', pos + 2))
+    {
+        text.insert(pos, 1, '\\');
+    }
+    return text;
+}
+
 void convertIssues(const fs::path & path)
 {
     fs::path outPath{fs::path(path).replace_extension(".json")};
     std::cout << "Convert issues at " << path.string() << " to " << outPath.string() << '\n';
     std::ifstream tsv(path);
-    std::ofstream json(outPath);
+    //std::ofstream json(outPath);
+    std::ostream &json{std::cout};
     int recordCount{};
     std::string line;
+    std::map<std::string, std::string> record;
+    int lastRecordId{-1};
+    bool firstRecord{true};
+    auto printRecord = [&]
+    {
+        if (record.empty())
+            return;
+        if (!firstRecord)
+            json << ",\n";
+        json << "{";
+        bool first{true};
+        for (const auto &pair : record)
+        {
+            if (!first)
+            {
+                json << ",";
+            }
+            json << "\n    \"" << quoted(pair.first) << "\": ";
+            if (pair.second == "True" || pair.second == "False")
+            {
+                json << (pair.second == "True" ? "true" : "false");
+            }
+            else
+            {
+                json << "\"" << quoted(pair.second) << "\"";
+            }
+            first = false;
+        }
+        json << "\n}";
+        firstRecord = false;
+    };
     while (tsv)
     {
         if (!std::getline(tsv, line))
@@ -28,7 +74,32 @@ void convertIssues(const fs::path & path)
             break;
         }
         ++recordCount;
+
+        std::vector<std::string> fields;
+        split(fields, line, boost::algorithm::is_any_of("\t"));
+        if (fields.size() != 3)
+        {
+            throw std::runtime_error("Expected 3 fields, got " + std::to_string(fields.size()));
+        }
+        for (std::string &field : fields)
+        {
+            field = field.substr(1, field.length() - 2);
+        }
+        const int recordId{std::stoi(fields[0])};
+        if (recordId != lastRecordId)
+        {
+            if (!record.empty())
+            {
+                printRecord();
+            }
+            record.clear();
+            record["id"] = fields[0];
+            lastRecordId = recordId;
+        }
+        record[fields[1]] = fields[2];
     }
+    printRecord();
+    json << "\n";
     std::cout << recordCount << " records processed.\n";
 }
 

@@ -3,6 +3,7 @@
   "name": "comics-simdjson",
   "version": "1.0.0",
   "dependencies": [
+    "boost-algorithm",
     "gtest",
     "simdjson"
   ]
