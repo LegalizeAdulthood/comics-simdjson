@@ -1,6 +1,3 @@
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
-
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -20,11 +17,22 @@ inline bool endsWith(const std::string &text, const std::string &suffix)
 
 inline std::string quoted(std::string text)
 {
-    for (std::string::size_type pos = text.find('"'); pos != std::string::npos; pos = text.find('"', pos + 2))
+    // replace "" with \"
+    for (std::string::size_type pos = text.find("\"\""); pos != std::string::npos; pos = text.find("\"\"", pos + 2))
     {
-        text.insert(pos, 1, '\\');
+        text[pos] = '\\';
     }
     return text;
+}
+
+void split(std::vector<std::string>&fields, const std::string text)
+{
+    const std::size_t split1 = text.find("\"\t\"");
+    const std::size_t split2 = text.find("\"\t\"", split1+1);
+    fields.clear();
+    fields.emplace_back(text.substr(1, split1 - 1));
+    fields.emplace_back(text.substr(split1 + 3, split2 - split1 - 3));
+    fields.emplace_back(text.substr(split2 + 3, text.length() - split2 - 3 - 1));
 }
 
 void convertIssues(const fs::path & path)
@@ -32,8 +40,7 @@ void convertIssues(const fs::path & path)
     fs::path outPath{fs::path(path).replace_extension(".json")};
     std::cout << "Convert issues at " << path.string() << " to " << outPath.string() << '\n';
     std::ifstream tsv(path);
-    //std::ofstream json(outPath);
-    std::ostream &json{std::cout};
+    std::ofstream json(outPath);
     int recordCount{};
     std::string line;
     std::map<std::string, std::string> record;
@@ -74,16 +81,16 @@ void convertIssues(const fs::path & path)
             break;
         }
         ++recordCount;
+        if (recordCount % 1000 == 0)
+        {
+            std::cout << recordCount << " records...\n";
+        }
 
         std::vector<std::string> fields;
-        split(fields, line, boost::algorithm::is_any_of("\t"));
+        split(fields, line);
         if (fields.size() != 3)
         {
             throw std::runtime_error("Expected 3 fields, got " + std::to_string(fields.size()));
-        }
-        for (std::string &field : fields)
-        {
-            field = field.substr(1, field.length() - 2);
         }
         const int recordId{std::stoi(fields[0])};
         if (recordId != lastRecordId)
@@ -154,5 +161,19 @@ int main(int argc, char *argv[])
     }
 
     const std::string dataDir{argv[1]};
-    tool::gcdToJSON(dataDir);
+    try
+    {
+        tool::gcdToJSON(dataDir);
+    }
+    catch (const std::exception &bang)
+    {
+        std::cerr << "Unexpected exception: " << bang.what() << '\n';
+        return 1;
+    }
+    catch (...)
+    {
+        std::cerr << "Unexpected exception\n";
+        return 2;
+    }
+    return 0;
 }
