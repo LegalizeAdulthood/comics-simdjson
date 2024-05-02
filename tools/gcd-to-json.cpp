@@ -12,7 +12,7 @@ namespace tool
 
 inline bool endsWith(const std::string &text, const std::string &suffix)
 {
-    return text.length() >= suffix.length() && text.substr(text.length()-suffix.length()) == suffix;
+    return text.length() >= suffix.length() && text.substr(text.length() - suffix.length()) == suffix;
 }
 
 inline std::string quoted(std::string text)
@@ -29,8 +29,7 @@ void split(std::vector<std::string> &fields, const std::string &text)
 {
     fields.clear();
     std::size_t start{1};
-    for (std::size_t split = text.find("\"\t\""); split != std::string::npos;
-         split = text.find("\"\t\"", split + 1))
+    for (std::size_t split = text.find("\"\t\""); split != std::string::npos; split = text.find("\"\t\"", split + 1))
     {
         fields.emplace_back(text.substr(start, split - start));
         start = split + 3;
@@ -38,7 +37,7 @@ void split(std::vector<std::string> &fields, const std::string &text)
     fields.emplace_back(text.substr(start, text.length() - start - 1));
 }
 
-void convertIssues(const fs::path & path)
+void convertIssues(const fs::path &path)
 {
     fs::path outPath{fs::path(path).replace_extension(".json")};
     std::cout << "Convert issues at " << path.string() << " to " << outPath.string() << '\n';
@@ -113,7 +112,7 @@ void convertIssues(const fs::path & path)
     std::cout << '\n' << recordCount << " records processed.\n";
 }
 
-void convertSequences(const fs::path & path)
+void convertSequences(const fs::path &path)
 {
     fs::path outPath{fs::path(path).replace_extension(".json")};
     std::cout << "Convert sequences at " << path.string() << " to " << outPath.string() << '\n';
@@ -126,33 +125,33 @@ void convertSequences(const fs::path & path)
     int lastSequenceId{-1};
     bool firstRecord{true};
     auto printRecord = [&]
+    {
+        if (record.empty())
+            return;
+        if (!firstRecord)
+            json << ",\n";
+        json << "{";
+        bool first{true};
+        for (const auto &pair : record)
         {
-            if (record.empty())
-                return;
-            if (!firstRecord)
-                json << ",\n";
-            json << "{";
-            bool first{true};
-            for (const auto &pair : record)
+            if (!first)
             {
-                if (!first)
-                {
-                    json << ",";
-                }
-                json << "\n    \"" << quoted(pair.first) << "\": ";
-                if (pair.second == "True" || pair.second == "False")
-                {
-                    json << (pair.second == "True" ? "true" : "false");
-                }
-                else
-                {
-                    json << "\"" << quoted(pair.second) << "\"";
-                }
-                first = false;
+                json << ",";
             }
-            json << "\n}";
-            firstRecord = false;
-        };
+            json << "\n    \"" << quoted(pair.first) << "\": ";
+            if (pair.second == "True" || pair.second == "False")
+            {
+                json << (pair.second == "True" ? "true" : "false");
+            }
+            else
+            {
+                json << "\"" << quoted(pair.second) << "\"";
+            }
+            first = false;
+        }
+        json << "\n}";
+        firstRecord = false;
+    };
     while (tsv)
     {
         if (!std::getline(tsv, line))
@@ -190,7 +189,7 @@ void convertSequences(const fs::path & path)
 
 void gcdToJSON(const std::string &dataDir)
 {
-    for ( const fs::directory_entry &entry : fs::directory_iterator(dataDir))
+    for (const fs::directory_entry &entry : fs::directory_iterator(dataDir))
     {
         const fs::path &path = entry.path();
         if (!(entry.is_regular_file() && path.extension().string() == ".tsv"))
