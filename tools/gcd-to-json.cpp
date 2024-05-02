@@ -25,14 +25,17 @@ inline std::string quoted(std::string text)
     return text;
 }
 
-void split(std::vector<std::string>&fields, const std::string text)
+void split(std::vector<std::string> &fields, const std::string &text)
 {
-    const std::size_t split1 = text.find("\"\t\"");
-    const std::size_t split2 = text.find("\"\t\"", split1+1);
     fields.clear();
-    fields.emplace_back(text.substr(1, split1 - 1));
-    fields.emplace_back(text.substr(split1 + 3, split2 - split1 - 3));
-    fields.emplace_back(text.substr(split2 + 3, text.length() - split2 - 3 - 1));
+    std::size_t start{1};
+    for (std::size_t split = text.find("\"\t\""); split != std::string::npos;
+         split = text.find("\"\t\"", split + 1))
+    {
+        fields.emplace_back(text.substr(start, split - start));
+        start = split + 3;
+    }
+    fields.emplace_back(text.substr(start, text.length() - start - 1));
 }
 
 void convertIssues(const fs::path & path)
@@ -83,7 +86,7 @@ void convertIssues(const fs::path & path)
         ++recordCount;
         if (recordCount % 1000 == 0)
         {
-            std::cout << recordCount << " records...\n";
+            std::cout << recordCount << " records...\r";
         }
 
         std::vector<std::string> fields;
@@ -107,7 +110,7 @@ void convertIssues(const fs::path & path)
     }
     printRecord();
     json << "\n";
-    std::cout << recordCount << " records processed.\n";
+    std::cout << '\n' << recordCount << " records processed.\n";
 }
 
 void convertSequences(const fs::path & path)
@@ -118,6 +121,38 @@ void convertSequences(const fs::path & path)
     std::ofstream json(outPath);
     int recordCount{};
     std::string line;
+    std::map<std::string, std::string> record;
+    int lastRecordId{-1};
+    int lastSequenceId{-1};
+    bool firstRecord{true};
+    auto printRecord = [&]
+        {
+            if (record.empty())
+                return;
+            if (!firstRecord)
+                json << ",\n";
+            json << "{";
+            bool first{true};
+            for (const auto &pair : record)
+            {
+                if (!first)
+                {
+                    json << ",";
+                }
+                json << "\n    \"" << quoted(pair.first) << "\": ";
+                if (pair.second == "True" || pair.second == "False")
+                {
+                    json << (pair.second == "True" ? "true" : "false");
+                }
+                else
+                {
+                    json << "\"" << quoted(pair.second) << "\"";
+                }
+                first = false;
+            }
+            json << "\n}";
+            firstRecord = false;
+        };
     while (tsv)
     {
         if (!std::getline(tsv, line))
@@ -125,8 +160,32 @@ void convertSequences(const fs::path & path)
             break;
         }
         ++recordCount;
+        if (recordCount % 1000 == 0)
+        {
+            std::cout << recordCount << " records...\r";
+        }
+
+        std::vector<std::string> fields;
+        split(fields, line);
+        if (fields.size() != 4)
+        {
+            throw std::runtime_error("Expected 4 fields, got " + std::to_string(fields.size()));
+        }
+        const int recordId{std::stoi(fields[0])};
+        const int sequenceId{std::stoi(fields[1])};
+        if (recordId != lastRecordId || sequenceId != lastSequenceId)
+        {
+            printRecord();
+            record.clear();
+            record["issue"] = fields[0];
+            lastRecordId = recordId;
+            lastSequenceId = sequenceId;
+        }
+        record[fields[2]] = fields[3];
     }
-    std::cout << recordCount << " records processed.\n";
+    printRecord();
+    json << "\n";
+    std::cout << '\n' << recordCount << " records processed.\n";
 }
 
 void gcdToJSON(const std::string &dataDir)
@@ -167,12 +226,12 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &bang)
     {
-        std::cerr << "Unexpected exception: " << bang.what() << '\n';
+        std::cerr << "\nUnexpected exception: " << bang.what() << '\n';
         return 1;
     }
     catch (...)
     {
-        std::cerr << "Unexpected exception\n";
+        std::cerr << "\nUnexpected exception\n";
         return 2;
     }
     return 0;
