@@ -1,3 +1,4 @@
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -27,6 +28,29 @@ inline std::string escaped(std::string text)
     for (std::string::size_type pos = text.find(R"("")"); pos != std::string::npos; pos = text.find(R"("")", pos + 2))
     {
         text[pos] = '\\';
+    }
+
+    // escape all TABs
+    for (std::string::size_type pos = text.find('\t'); pos != std::string::npos; pos = text.find('\t', pos + 1))
+    {
+        text[pos] = '\\';
+    }
+
+    // scan for control characters
+    std::string::size_type pos = 0;
+    while (pos < text.length())
+    {
+        const unsigned char c = static_cast<unsigned char>(text[pos]);
+        if (c < 32)
+        {
+            std::cerr << "\nControl character (^" << static_cast<char>(c + 64) << ") found in '" << text << "'; dropping\n"
+                << "                                 " << std::string(pos, ' ') << "^--\n";
+            text.erase(pos, 1);
+        }
+        else
+        {
+            ++pos;
+        }
     }
     return text;
 }
