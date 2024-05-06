@@ -15,10 +15,16 @@ inline bool endsWith(const std::string &text, const std::string &suffix)
     return text.length() >= suffix.length() && text.substr(text.length() - suffix.length()) == suffix;
 }
 
-inline std::string quoted(std::string text)
+inline std::string escaped(std::string text)
 {
+    // escape all backslashes
+    for (std::string::size_type pos = text.find('\\'); pos != std::string::npos; pos = text.find('\\', pos + 1))
+    {
+        text[pos] = '\\';
+    }
+
     // replace "" with \"
-    for (std::string::size_type pos = text.find("\"\""); pos != std::string::npos; pos = text.find("\"\"", pos + 2))
+    for (std::string::size_type pos = text.find(R"("")"); pos != std::string::npos; pos = text.find(R"("")", pos + 2))
     {
         text[pos] = '\\';
     }
@@ -62,14 +68,14 @@ void convertIssues(const fs::path &path)
             {
                 json << ",";
             }
-            json << "\n    \"" << quoted(pair.first) << "\": ";
+            json << "\n    \"" << escaped(pair.first) << "\": ";
             if (pair.second == "True" || pair.second == "False")
             {
                 json << (pair.second == "True" ? "true" : "false");
             }
             else
             {
-                json << "\"" << quoted(pair.second) << "\"";
+                json << "\"" << escaped(pair.second) << "\"";
             }
             first = false;
         }
@@ -138,14 +144,14 @@ void convertSequences(const fs::path &path)
             {
                 json << ",";
             }
-            json << "\n    \"" << quoted(pair.first) << "\": ";
+            json << "\n    \"" << escaped(pair.first) << "\": ";
             if (pair.second == "True" || pair.second == "False")
             {
                 json << (pair.second == "True" ? "true" : "false");
             }
             else
             {
-                json << "\"" << quoted(pair.second) << "\"";
+                json << "\"" << escaped(pair.second) << "\"";
             }
             first = false;
         }
