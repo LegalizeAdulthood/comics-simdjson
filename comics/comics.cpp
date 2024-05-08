@@ -113,7 +113,7 @@ void JSONDatabase::printMatchingSequences(std::ostream &str, const std::string_v
 {
     std::map<int, std::vector<simdjson::dom::object>> issueSequences;
 
-    for (simdjson::dom::element &record : m_sequences.get_array())
+    for (const simdjson::dom::element record : m_sequences.get_array())
     {
         if (!record.is_object())
         {
