@@ -1,3 +1,6 @@
+#include <map>
+#include <vector>
+
 #include <simdjson.h>
 
 #include "comics.h"
@@ -13,11 +16,15 @@ inline bool endsWith(const std::string &text, const std::string &suffix)
 namespace
 {
 
-void printSequence(std::ostream &str, const simdjson::simdjson_result<simdjson::dom::object> &sequence)
+void printSequence(std::ostream &str, const simdjson::dom::object &sequence)
 {
     for (const simdjson::dom::key_value_pair field : sequence)
     {
-        str << field.key << ": " ;
+        if (field.key.length() > 18)
+        {
+            throw std::runtime_error("Field " + std::string{field.key} + " too long");
+        }
+        str << std::string(18 - field.key.length(), ' ') << field.key << ": ";
         if (field.value.is_string())
             str << field.value.get_string().value() << '\n';
         else if (field.value.is_bool())
@@ -97,7 +104,8 @@ JSONDatabase::JSONDatabase(const std::filesystem::path &jsonDir)
 
 void JSONDatabase::printScriptSequences(std::ostream &str, const std::string &name)
 {
-    bool first{true};
+    std::map<int, std::vector<simdjson::dom::object>> issueSequences;
+
     for (simdjson::dom::element &record : m_sequences.get_array())
     {
         if (!record.is_object())
@@ -116,16 +124,34 @@ void JSONDatabase::printScriptSequences(std::ostream &str, const std::string &na
                 }
                 if (value.get_string().value().find(name) != std::string::npos)
                 {
-                    if (!first)
-                    {
-                        str << '\n';
-                    }
-                    printSequence(str, record.get_object());
-                    first = false;
+                    simdjson::dom::object obj = record.get_object().value();
+                    const int issue = std::stoi(std::string{obj.at_key("issue").get_string().value()});
+                    issueSequences[issue].push_back(obj);
                 }
                 break;
             }
         }
+    }
+
+    int firstIssue{true};
+    for (const auto &[issue, matches] : issueSequences)
+    {
+        if (!firstIssue)
+        {
+            str << '\n';
+        }
+        str << "Issue: " << issue << '\n';
+        bool first{true};
+        for (const simdjson::dom::object &seq : matches)
+        {
+            if (!first)
+            {
+                str << '\n';
+            }
+            printSequence(str, seq);
+            first = false;
+        }
+        firstIssue = false;
     }
 }
 
