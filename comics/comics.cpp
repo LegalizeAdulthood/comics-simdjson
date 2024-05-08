@@ -41,13 +41,17 @@ JSONDatabase::JSONDatabase(const std::filesystem::path &jsonDir)
         const std::string filename{path.filename().string()};
         if (endsWith(filename, "issues.json"))
         {
+            std::cout << "Reading issues...\n";
             m_issues = parser.load(path.string());
             foundIssues = true;
+            std::cout << "done.\n";
         }
         else if (endsWith(filename, "sequences.json"))
         {
+            std::cout << "Reading sequences...\n";
             m_sequences = parser.load(path.string());
             foundSequences = true;
+            std::cout << "done.\n";
         }
     }
     if (!(foundIssues && foundSequences))
