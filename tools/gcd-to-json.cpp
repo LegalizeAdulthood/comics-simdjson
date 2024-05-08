@@ -68,7 +68,7 @@ void split(std::vector<std::string> &fields, const std::string &text)
     fields.emplace_back(text.substr(start, text.length() - start - 1));
 }
 
-void convertIssues(const fs::path &path)
+void convertIssues( const fs::path &path, bool singleLineRecords )
 {
     fs::path outPath{fs::path(path).replace_extension(".json")};
     std::cout << "Convert issues at " << path.string() << " to " << outPath.string() << '\n';
@@ -93,7 +93,7 @@ void convertIssues(const fs::path &path)
             {
                 json << ",";
             }
-            json << "\n    \"" << escaped(pair.first) << "\": ";
+            json << (singleLineRecords ? " \"" : "\n    \"") << escaped(pair.first) << "\": ";
             if (pair.second == "True" || pair.second == "False")
             {
                 json << (pair.second == "True" ? "true" : "false");
@@ -104,9 +104,10 @@ void convertIssues(const fs::path &path)
             }
             first = false;
         }
-        json << "\n}";
+        json << (singleLineRecords ? "}" : "\n}");
         firstRecord = false;
     };
+    json << "[\n";
     while (tsv)
     {
         if (!std::getline(tsv, line))
@@ -139,11 +140,11 @@ void convertIssues(const fs::path &path)
         record[fields[1]] = fields[2];
     }
     printRecord();
-    json << "\n";
+    json << "\n]\n";
     std::cout << '\n' << recordCount << " records processed.\n";
 }
 
-void convertSequences(const fs::path &path)
+void convertSequences( const fs::path &path, bool singleLineRecords )
 {
     fs::path outPath{fs::path(path).replace_extension(".json")};
     std::cout << "Convert sequences at " << path.string() << " to " << outPath.string() << '\n';
@@ -169,7 +170,7 @@ void convertSequences(const fs::path &path)
             {
                 json << ",";
             }
-            json << "\n    \"" << escaped(pair.first) << "\": ";
+            json << (singleLineRecords ? " \"" : "\n    \"") << escaped(pair.first) << "\": ";
             if (pair.second == "True" || pair.second == "False")
             {
                 json << (pair.second == "True" ? "true" : "false");
@@ -180,9 +181,10 @@ void convertSequences(const fs::path &path)
             }
             first = false;
         }
-        json << "\n}";
+        json << (singleLineRecords ? "}" : "\n}");
         firstRecord = false;
     };
+    json << "[\n";
     while (tsv)
     {
         if (!std::getline(tsv, line))
@@ -214,11 +216,11 @@ void convertSequences(const fs::path &path)
         record[fields[2]] = fields[3];
     }
     printRecord();
-    json << "\n";
+    json << "\n]\n";
     std::cout << '\n' << recordCount << " records processed.\n";
 }
 
-void gcdToJSON(const std::string &dataDir)
+void gcdToJSON( const std::string &dataDir, bool singleLineRecords )
 {
     for (const fs::directory_entry &entry : fs::directory_iterator(dataDir))
     {
@@ -230,11 +232,11 @@ void gcdToJSON(const std::string &dataDir)
 
         if (endsWith(path.stem().string(), "issues"))
         {
-            convertIssues(path);
+            convertIssues(path, singleLineRecords);
         }
         else if (endsWith(path.stem().string(), "sequences"))
         {
-            convertSequences(path);
+            convertSequences(path, singleLineRecords);
         }
     }
 }
@@ -243,16 +245,17 @@ void gcdToJSON(const std::string &dataDir)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
+    if (argc < 2 || argc > 3 || (argc == 3 && argv[1] != std::string{"-s"}))
     {
-        std::cerr << "Usage: gcd-to-json <datadir>\n";
+        std::cerr << "Usage: gcd-to-json [-s] <datadir>\n";
         return 1;
     }
+    const bool singleLineRecords{argc == 3};
 
-    const std::string dataDir{argv[1]};
+    const std::string dataDir{argv[singleLineRecords ? 2 : 1]};
     try
     {
-        tool::gcdToJSON(dataDir);
+        tool::gcdToJSON(dataDir, singleLineRecords);
     }
     catch (const std::exception &bang)
     {
