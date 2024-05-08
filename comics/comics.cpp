@@ -48,6 +48,8 @@ public:
     void printColorSequences(std::ostream &str, const std::string &name) override;
 
 private:
+    void printMatchingSequences(std::ostream &str, const std::string_view &fieldName, const std::string &name);
+
     simdjson::dom::parser parser;
     simdjson::simdjson_result<simdjson::dom::element> m_issues;
     simdjson::simdjson_result<simdjson::dom::element> m_sequences;
@@ -104,6 +106,11 @@ JSONDatabase::JSONDatabase(const std::filesystem::path &jsonDir)
 
 void JSONDatabase::printScriptSequences(std::ostream &str, const std::string &name)
 {
+    printMatchingSequences(str, "script", name);
+}
+
+void JSONDatabase::printMatchingSequences(std::ostream &str, const std::string_view &fieldName, const std::string &name)
+{
     std::map<int, std::vector<simdjson::dom::object>> issueSequences;
 
     for (simdjson::dom::element &record : m_sequences.get_array())
@@ -115,7 +122,7 @@ void JSONDatabase::printScriptSequences(std::ostream &str, const std::string &na
 
         for (const simdjson::dom::key_value_pair &field : record.get_object())
         {
-            if (field.key == "script")
+            if (field.key == fieldName)
             {
                 const simdjson::dom::element &value = field.value;
                 if (!value.is_string())
@@ -157,14 +164,17 @@ void JSONDatabase::printScriptSequences(std::ostream &str, const std::string &na
 
 void JSONDatabase::printPencilSequences(std::ostream &str, const std::string &name)
 {
+    printMatchingSequences(str, "pencils", name);
 }
 
 void JSONDatabase::printInkSequences(std::ostream &str, const std::string &name)
 {
+    printMatchingSequences(str, "inks", name);
 }
 
 void JSONDatabase::printColorSequences(std::ostream &str, const std::string &name)
 {
+    printMatchingSequences(str, "colors", name);
 }
 
 } // namespace
