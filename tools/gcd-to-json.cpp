@@ -20,9 +20,9 @@ inline bool endsWith(const std::string &text, const std::string &suffix)
 inline std::string escaped(std::string text)
 {
     // escape all backslashes
-    for (std::string::size_type pos = text.find('\\'); pos != std::string::npos; pos = text.find('\\', pos + 1))
+    for (std::string::size_type pos = text.find('\\'); pos != std::string::npos; pos = text.find('\\', pos + 2))
     {
-        text[pos] = '\\';
+        text.insert(pos, 1, '\\');
     }
 
     // replace "" with \"
@@ -34,7 +34,8 @@ inline std::string escaped(std::string text)
     // escape all TABs
     for (std::string::size_type pos = text.find('\t'); pos != std::string::npos; pos = text.find('\t', pos + 1))
     {
-        text[pos] = '\\';
+        text.erase(pos, 1);
+        text.insert(pos, "\\t");
     }
 
     // scan for control characters
